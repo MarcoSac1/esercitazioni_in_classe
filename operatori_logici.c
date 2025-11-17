@@ -3,6 +3,12 @@
 int main() {
     int votoMatematica = 4;
     int votoCondotta = 6;
+
+    do
+    {
+        /* code */
+    } while (votoCondotta => 10);
+    
     //condizione con end "&&" che necessita di due condizioni vere
     if(votoMatematica <= 6 && votoCondotta < 7){
         printf("Sei bocciato %d -- %d\n", votoMatematica ,votoCondotta);
