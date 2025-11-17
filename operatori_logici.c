@@ -1,13 +1,17 @@
 #include <stdio.h>
 
 int main() {
-    int votoMatematica = 4;
-    int votoCondotta = 6;
+    int votoMatematica;
+    int votoCondotta;
 
     do
     {
-        /* code */
-    } while (votoCondotta => 10);
+        printf("inserisci il voto di Matematica\n");
+        scanf("%d ", &votoMatematica);
+
+        printf("inserisci il voto di Condotta\n");
+        scanf("%d ", &votoCondotta);
+    } while (votoCondotta > 10 || votoMatematica < 0);
     
     //condizione con end "&&" che necessita di due condizioni vere
     if(votoMatematica <= 6 && votoCondotta < 7){
