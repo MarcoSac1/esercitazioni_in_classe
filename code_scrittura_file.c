@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define S 100
 #define N 4
@@ -23,6 +24,8 @@ typedef struct{
 
 #define CODAVUOTA NULL
 #define FFLUSH while(getchar()!='\n')
+
+/* ------------------- CODE ------------------- */
 
 void MakeNullQueue(queue *q){
     q->front = q->rear = CODAVUOTA;
@@ -126,6 +129,8 @@ void VisualizzaTutteLeCode(queue archivio[]){
     }
 }
 
+/* ------------------- SALVATAGGIO ------------------- */
+
 void SalvaSuFile(tipobaseQueue x, int indiceCoda){
     FILE *fp = fopen("code.txt", "a");
     if (fp == NULL){
@@ -142,33 +147,98 @@ void SalvaSuFile(tipobaseQueue x, int indiceCoda){
     fclose(fp);
 }
 
+/* Visualizza lo storico leggendo preferibilmente code.log (format con timestamp),
+   se non presente prova a leggere code.txt (vecchio formato). */
 void VisualizzaStorico(){
-    FILE *fp = fopen("code.txt", "r");
-    if (fp == NULL){
-        printf("\nNessun dato salvato.\n");
+    FILE *fp;
+    char buffer[512];
+
+    /* 1) prova code.log */
+    fp = fopen("code.log", "r");
+    if (fp != NULL) {
+        printf("\n--- STORICO (code.log) ---\n");
+        while (fgets(buffer, sizeof(buffer), fp)) {
+            /* Provo a parsare la riga log nel formato che usi:
+            [dd/mm/yyyy hh:mm:ss] Cognome=%s Nome=%s Numero=%s Sportello=%d
+               Se sscanf fallisce (es. formato diverso) stampo la riga grezza. */
+            int d,m,y,hh,mm,ss, idx;
+            char cogn[S], nome[S], numero[S];
+            int parsed = sscanf(buffer,
+                "[%d/%d/%d %d:%d:%d] Cognome=%99s Nome=%99s Numero=%99s Sportello=%d",
+                &d, &m, &y, &hh, &mm, &ss,
+                cogn, nome, numero, &idx);
+
+            if (parsed == 10) {
+                printf("\n[%02d/%02d/%04d %02d:%02d:%02d]\n",d,m,y,hh,mm,ss);
+                printf("Cognome: %s\n", cogn);
+                printf("Nome: %s\n", nome);
+                printf("Numero linea: %s\n", numero);
+                printf("Sportello: %d\n", idx);
+                printf("------------------------\n");
+            } else {
+                /* riga con formato diverso: la stampo così com'è */
+                printf("%s", buffer);
+            }
+        }
+        fclose(fp);
         return;
     }
 
-    tipobaseQueue x;
-    int indice;
-
-    printf("\n--- STORICO COMPLETO ---\n");
-
-    while (fscanf(fp, "%s %s %s %d",
-        x.cognome,
-        x.nome,
-        x.numero_linea,
-        &indice) == 4){
-
-        printf("\nCognome: %s", x.cognome);
-        printf("\nNome: %s", x.nome);
-        printf("\nNumero linea: %s", x.numero_linea);
-        printf("\nSportello: %d", indice);
-        printf("\n------------------------");
+    /* 2) fallback su code.txt (vecchio formato) */
+    fp = fopen("code.txt", "r");
+    if (fp == NULL){
+        printf("\nNessun dato salvato (code.log e code.txt non trovati).\n");
+        return;
     }
 
+    printf("\n--- STORICO (code.txt) ---\n");
+    tipobaseQueue x;
+    int indice;
+    while (fscanf(fp, "%99s %99s %99s %d",x.cognome, x.nome, x.numero_linea, &indice) == 4) {
+        printf("\nCognome: %s\n", x.cognome);
+        printf("Nome: %s\n", x.nome);
+        printf("Numero linea: %s\n", x.numero_linea);
+        printf("Sportello: %d\n", indice);
+        printf("------------------------\n");
+    }
     fclose(fp);
 }
+
+void SalvaLog(tipobaseQueue x, int indiceCoda){
+    FILE *fp = fopen("code.log", "a");
+    if (fp == NULL){
+        printf("Errore nell'apertura del file log!\n");
+        return;
+    }
+
+    /* Ottieni data e ora */
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+
+    /* Scrive sul file di log */
+    fprintf(fp,
+        "[%02d/%02d/%04d %02d:%02d:%02d] "
+        "Cognome=%s Nome=%s Numero=%s Sportello=%d\n",
+        t->tm_mday, t->tm_mon + 1, t->tm_year + 1900,
+        t->tm_hour, t->tm_min, t->tm_sec,
+        x.cognome, x.nome, x.numero_linea, indiceCoda
+    );
+
+    fclose(fp);
+
+    /* --- STAMPA SU TERMINALE --- */
+    printf("\n--- LOG OPERAZIONE ---\n");
+    printf("[%02d/%02d/%04d %02d:%02d:%02d]\n",
+        t->tm_mday, t->tm_mon + 1, t->tm_year + 1900,
+        t->tm_hour, t->tm_min, t->tm_sec);
+
+    printf("Cognome: %s\n", x.cognome);
+    printf("Nome: %s\n", x.nome);
+    printf("Numero linea: %s\n", x.numero_linea);
+    printf("Sportello: %d\n", indiceCoda);
+    printf("------------------------\n");
+}
+
 
 queue archivio[N];
 
@@ -189,7 +259,7 @@ int main(){
         printf("\n6 - Visualizza storico salvato su file");
         printf("\nScelta: ");
 
-        scanf("%d", &s);
+        if (scanf("%d", &s) != 1) { FFLUSH; continue; }
         FFLUSH;
 
         switch (s){
@@ -202,7 +272,7 @@ int main(){
                     printf("\n2 - Sezione amministrativa");
                     printf("\n3 - Telefonia mobile");
                     printf("\nScelta: ");
-                    scanf("%d", &indice);
+                    if (scanf("%d", &indice) != 1) { FFLUSH; indice = -1; }
                     FFLUSH;
                 } while (indice < 0 || indice >= N);
 
@@ -210,7 +280,12 @@ int main(){
                     printf("\nInserisci Cliente");
                     LeggiElementoQueue(&elem);
                     EnQueue(&archivio[indice], elem);
-                    SalvaSuFile(elem, indice);   // <--- SALVA NEL FILE
+
+                    /* salviamo sia il log con timestamp sia il vecchio file storico
+                    (se vuoi mantenerli entrambi). Se preferisci solo code.log,
+                       commenta SalvaSuFile(). */
+                    SalvaLog(elem, indice);
+                    SalvaSuFile(elem, indice);  /* facoltativo: mantiene code.txt */
                 }
                 else printf("\nCoda piena\n");
                 break;
@@ -223,7 +298,7 @@ int main(){
                     printf("\n2 - Sezione amministrativa");
                     printf("\n3 - Telefonia mobile");
                     printf("\nScelta: ");
-                    scanf("%d", &indice);
+                    if (scanf("%d", &indice) != 1) { FFLUSH; indice = -1; }
                     FFLUSH;
                 } while (indice < 0 || indice >= N);
 
@@ -242,7 +317,7 @@ int main(){
                     printf("\nQuale coda vuoi visualizzare?");
                     printf("\n0 - Bollette e fatture\n1 - Guasti sulla linea\n2 - Sezione amministrativa\n3 - Telefonia mobile");
                     printf("\nScelta: ");
-                    scanf("%d", &indice);
+                    if (scanf("%d", &indice) != 1) { FFLUSH; indice = -1; }
                     FFLUSH;
                 } while (indice < 0 || indice >= N);
 
@@ -255,6 +330,10 @@ int main(){
 
             case 6:
                 VisualizzaStorico();
+                break;
+
+            default:
+                if (s != 5) printf("Scelta non valida\n");
                 break;
         }
 
